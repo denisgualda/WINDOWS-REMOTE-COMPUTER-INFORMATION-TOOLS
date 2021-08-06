@@ -1,0 +1,608 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="tablelist.css" type="text/css" />
+
+    <HTA:APPLICATION
+        APPLICATIONNAME = "PING HOSTS & INFO HOSTS"
+        id="PING HOSTS & INFO HOSTS"
+        name="PING HOSTS & INFO HOSTS"
+    />
+
+<!-- vbscript  -->   
+<script LANGUAGE="VBSCRIPT">
+
+'---------------------------------------------------'
+'INICI BOTO EXECUTA '
+    'Comprova si els llistat dequips es troben actius i genera una graella cridant funcions javascript.'
+    Sub executa
+
+        '*********************************'
+        'CRIDA FUNCIO JAVASCRIPT ---> esborraCeles - NETEJA TAULA CADA COP QUE EXECUTI BOTO PER NO DUPLICAR FILES'
+        Me.esborraCeles "entries", true
+        '*********************************'
+            'SEPARA CADA LINIA DEL TEXTBOX'
+            strText = txt_entrada.Value
+            arrLines = Split(strText, vbCrLf)
+            For Each strLine in arrLines
+            
+            'EXECUTA PING LLEGINT DEL FITXER'
+            '---------------------------------------------------'
+                strhost = strLine   'Guarda cada linia del textbox per comprovar si es troba actiu'
+                host_actiu = actiu(strhost) 'COMPROVA ESTAT DEL HOST (actiu /no actiu)'
+                
+                if host_actiu = true then
+                    resultat =  strhost 
+                else
+                    resultat = strhost & "     NO PING"
+                end if
+                    
+                '*********************************'
+                 Me.creaCeles resultat  'CRIDA LA FUNCIO JAVASCRIPT ---> creaCeles - PASSAN COM A PARÀMETRE CADA LINIA OBTINGUDA'
+                '*********************************'
+
+            Next
+    End sub  
+'-------------------------------------'
+
+
+'-------------------------------------'
+'INICI BOTO INFO EQUIP'
+Sub infoEquip ()
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    info_host(strComputer)  'CRIDA FUNCIO PER OBTENIR INFORMACIO DE LEQUIP.'
+
+End sub
+'-------------------------------------'
+
+
+'-------------------------------------'
+'INICI BOTO OBRIR C$'
+Sub ObrirC
+    Set objShell = CreateObject("WScript.Shell")
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    objShell.Run("\\"&strComputer&"\c$")
+
+End sub
+'-------------------------------------'
+
+
+'-------------------------------------'
+'INICI BOTO OBRIR D$'
+Sub ObrirD
+    Set objShell = CreateObject("WScript.Shell")
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    objShell.Run("\\"&strComputer&"\D$")
+
+End sub
+'-------------------------------------'
+
+
+'-------------------------------------'
+'INICI BOTO REGISTRE REMOT'
+Sub RegistreEquip
+    
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    Set objShell = CreateObject("WScript.Shell")
+    Set ObjExec = objShell.Exec("cmd.exe /c sc \\" & strComputer & " config RemoteRegistry start= auto")
+    Set ObjExec = objShell.Exec("cmd.exe /c sc \\" & strComputer & " start RemoteRegistry")
+
+    MsgBox "Servei Registre remot activat. Clica Acceptar per continuar"
+
+    'CRIDA FITXER obre_registre_remot.ps1'
+    strInstruccio0 = "powershell.exe Set-ExecutionPolicy Unrestricted -Force"
+    strDosCommand0 = strInstruccio0
+    Set objShell = CreateObject("Wscript.Shell")
+    Set objExec = objShell.Exec(strDOSCommand0)
+    strPSResults0 = objExec.StdOut.ReadAll
+    strInstruccio = "powershell -file obre_registre_remot.ps1"
+    strDOSCommand = strInstruccio & " " & strComputer
+    Set objShell = CreateObject("Wscript.Shell")
+    Set objExec = objShell.Exec(strDOSCommand)
+
+End sub
+'-------------------------------------'
+
+
+
+'-------------------------------------'
+'INICI BOTO LLISTAT PROGRAMARI'
+Sub programariInstalat
+    
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    llista_Programari(strComputer)
+
+End sub
+'-------------------------------------'
+
+
+
+'FUNCIO EXECUTA PING'
+function actiu(strhost)
+    Set oWMI = GetObject("winmgmts:\\.\root\cimv2")
+    Set oPing = oWMI.Get("Win32_PingStatus.Address='"& strhost & "'")
+    If oPing.StatusCode = 0 Then 
+        actiu = true
+    Else
+        actiu = false
+    End If
+end function
+
+
+'FUNCIO INFO HOST'
+'..........................................................................................................................................................'
+function info_host(strComputer)
+
+        Dim mess,item
+        Dim objSWbemServices, objSWbemLocator
+
+        'CONNEXIO A EQUIP REMOT A: Root\CIMv2'
+        '********************************************'
+
+        strComputer = strComputer
+        strUser =""                                          
+        strPasswor = ""
+        Set objSWbemLocator = CreateObject("WbemScripting.SWbemLocator")
+        Set objSWbemServices = objSWbemLocator.ConnectServer(strComputer, _
+                                                             "Root\CIMv2", _
+                                                             strUser, _
+                                                             strPassword)
+                                                            
+        'INFORMACIO DE SISTEMA'
+        '*************************************************************'
+        Dim wmiItemsOSinfo
+        Set wmiItemsOSinfo = objSWbemServices.ExecQuery("SELECT * FROM Win32_OperatingSystem")      ''Informació sistema operatiu
+        mess = mess & "-----------------------------------------------------------" & VBCrlf
+        mess = mess & VBCrlf
+        For each item in wmiItemsOSinfo
+            With item
+            mess = mess & " HOSTNAME:   " & .CSName & VBCrlf
+            mess = mess & VBCrlf
+            mess= mess & " Sistema Operatiu:    " & .Caption & " " & .OSArchitecture & VBCrlf
+            mess = mess & VBCrlf
+            End With
+        Next
+
+        'LLEGIR REGISTRE  (PLATAFORMA (DEPARTAMENT/ORGANISME)'
+        '***************************************************************'
+
+        Const HKEY_LOCAL_MACHINE = &H80000002
+
+        Set oReg=GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & _
+            strComputer & "\root\default:StdRegProv")
+
+        'CONSULTA HKEY_LOCAL_MACHINE\SOFTWARE\PLATAFORMA\INFORMACION_PUESTO ---> Departament -- Organisme'
+        strKeyPath = "SOFTWARE\Plataforma\Informacion_Puesto"
+        strDepartament = "Departament"
+        strOrganisme = "Organisme"
+
+        oReg.GetStringValue HKEY_LOCAL_MACHINE,strKeyPath,strDepartament,strValue
+        mess = mess & "     >> Departament: " & strValue & VBCrlf
+        mess= mess & VBCrlf
+        oReg.GetStringValue HKEY_LOCAL_MACHINE,strKeyPath,strOrganisme,strValue
+        mess = mess & "     >> Organisme: " & strValue & VBCrlf
+        mess = mess & VBCrlf
+
+        'CONSULTA HKEY_LOCAL_MACHINE\SOFTWARE\PLATAFORMA\MASTER ---> Display Version'
+        strKeyPath = "SOFTWARE\Plataforma\MASTER"
+        strVersioMaqueta = "DisplayVersion"
+
+        oReg.GetStringValue HKEY_LOCAL_MACHINE,strKeyPath,strVersioMaqueta,strValue
+        'strValue = right(strValue,5)'
+        mess = mess & "     >> Versio maqueta: " & strValue & VBCrlf
+        mess= mess & VBCrlf
+
+        'INFORMACIO USUARI LOGUEJAT'
+        '***************************************************************'
+        ComputerName ="."
+        Set wmiServiceusuari = GetObject("winmgmts:\\" & StrComputer)
+        Dim wmiItemusuari
+        Set wmiItemusuari = wmiServiceusuari.ExecQuery("SELECT * FROM Win32_ComputerSystem")
+        For Each item in wmiItemusuari
+            With item
+                mess = mess & " USUARI LOGUEJAT:    " & .UserName & VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+        
+        Dim wmiItemsSysinfo
+        Set wmiItemsSysinfo = objSWbemServices.ExecQuery("SELECT * FROM Win32_ComputerSystemProduct")       'Informacio de lequip'
+        For Each item in wmiItemsSysinfo
+            With item
+                mess = mess & " MODEL:  " & .Vendor & " " & .Name & VBCrlf
+                mess = mess & VBCrlf
+                mess = mess & " S/N:    " & .IdentifyingNumber & VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+
+        Set wmiItemTimeinfo = wmiServiceusuari.ExecQuery("SELECT * FROM Win32_OperatingSystem")
+        For Each item in wmiItemTimeinfo
+            With item
+                data = .LastBootUpTime
+                any = Left(data,4)
+                mes = mid(data,5,2)
+                dia = mid(data,7,2)
+                hora = mid(data,9,2)
+                minuts = mid(data,11,2)
+
+                mess = mess & " Data/hora inici equip: " & any & "/"& mes & "/" & dia & " " & hora & ":" & minuts &  VBCrlf
+                mess = mess & VBCrLf
+            End With
+        Next
+
+        mess = mess & VBCrlf
+
+        'INFORMACIO CPU'
+        '***************************************************************'
+        ComputerName = "."
+        Set wmiService = GetObject("winmgmts:\\" & StrComputer)
+        Set wmiItems = wmiService.ExecQuery("SELECT * FROM win32_Processor")
+        For Each item in wmiItems
+            With item
+                mess = mess & " CPU:    " & .Name & .AddressWidth & VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+
+        'INFORMACIO RAM'
+        '***************************************************************'
+        Dim wmiItemsMemory
+        Set wmiItemsMemory = objSWbemServices.ExecQuery("SELECT * FROM win32_PhysicalMemory")
+        For Each item in wmiItemsMemory
+            With item
+                'mess = mess & "- Modul instalat a: " & .BankLabel & " "  & .DeviceLocator &  VBCrlf & "- Capacitat: " & left(.Capacity/1024^3,6) & " GB " & VBCrlf & "- Fabricant: " & .ManuFacturer & VBCrlf & "- Num.serie: " & .PartNumber & VBCrlf'
+                mess = mess & " RAM:    " & left(.Capacity/1024^3,6) & " GB " & VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+
+        'INFORMACIO DISC'
+        '***************************************************************'
+        Dim wmiItemsDisk
+        Set wmiItemsDisk = objSWbemServices.ExecQuery("SELECT * FROM win32_LogicalDisk")
+        For Each item in wmiItemsDisk
+            With item
+                mess = mess & " DISC: Espai lliure: " & .Caption & " " & left(.FreeSpace/1024^3,3) & " GB " & "/ " & left(.Size/1024^3,3) & " GB" & VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+
+        'INFORMACIO XARXA'
+        '***************************************************************'
+        mess = mess & VBCrlf
+        Set wmiItemsxarxa = objSWbemServices.ExecQuery("SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = True")
+        mess = mess & "INFORMACIO DE XARXA " & VBCrlf 
+        mess = mess & "------------------------" & VBCrlf
+        mess = mess & VBCrLf
+        For Each item in wmiItemsxarxa
+            With item
+                mess = mess & "ADAPTADOR DE XARXA: " & .Description & VBCrLfd
+                mess = mess & VBCrlf  
+                For Each strIPSubnet in .IPSubnet
+                    subxarxa= subxarxa & strIPSubnet
+                    '*******************************************************************************************************************************'
+                    'Retallem els 2 últims digits que agafa de la Mascara de subxarxa (64) per deixar unicament els 12 digits vàlids 255.255.255.255'
+                    subxarxa = Left(subxarxa,15)
+                Next
+                For Each strIPAddress in .IPaddress 
+                    mess = mess & VBCrlf  
+                    mess = mess & "     >> IP: " & strIPAddress & " /  " & subxarxa & VBCrLf 
+                    mess = mess & VBCrlf
+                    mess = mess & "     >> MAC: " & .MACAddress & VBCrLf
+                    mess = mess & VBCrlf
+                Next
+                mess = mess & "     >> DHCP Habilitat: " & .DHCPEnabled & VBCrlf
+                    mess = mess & VBCrLf
+            End With
+        Next
+        mess = mess & "-----------------------------------------------------------" & VBCrlf
+        mess = mess & VBCrLf
+
+        '----------------------------------------------------------------------'
+
+        'INFORMACIO PANTALLA'
+        '***************************************************************'
+        'INFORMACIO PANTALLA PER POWERSHELL --> executa el powershell info_monitor.ps1'
+        mess = mess & "PANTALLA" & VBCrlf
+        mess = mess & "------------------------" & VBCrlf
+
+        'HABILITA FUNCIO D'EXECUCIO D'SCRIPTS POWERSHELL EN EQUIP QUE EXECUTA SCRIPT (local)'
+        strInstruccio0 = "powershell.exe Set-ExecutionPolicy Unrestricted -Force"
+        strDosCommand0 = strInstruccio0
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand0)
+        strPSResults0 = objExec.StdOut.ReadAll
+
+        strInstruccio = "powershell -file info_monitor.ps1"
+        strDOSCommand = strInstruccio & " " & strComputer 
+
+        'strDOSCommand = "powershell -file -paramter info_monitor.ps1"'
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand)
+        strPSResults = objExec.StdOut.ReadAll
+        mess = mess & strPSresults
+        mess = mess & VBCrlf
+        '--------------------------------------------------------------------------------------------------------------------------------------------------------'
+
+'INFORMACIO PANTALLA'
+        '***************************************************************'
+        'INFORMACIO DOCKSTATION --> executa el powershell info_dock.ps1'
+        mess = mess & "DOCKSTATION" & VBCrlf
+        mess = mess & "------------------------" & VBCrlf
+
+        'HABILITA FUNCIO DEXECUCIO DSCRIPTS POWERSHELL EN EQUIP QUE EXECUTA SCRIPT (local)'
+        strInstruccio0 = "powershell.exe Set-ExecutionPolicy Unrestricted -Force"
+        strDosCommand0 = strInstruccio0
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand0)
+        strPSResults0 = objExec.StdOut.ReadAll
+
+        strInstruccio = "powershell -file info_dock.ps1"
+        strDOSCommand = strInstruccio & " " & strComputer 
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand)
+        strPSResults = objExec.StdOut.ReadAll
+
+        mess = mess & "s/n: " & strPSresults
+        '--------------------------------------------------------------------------------------------------------------------------------------------------------'
+
+        ' FI - ESCRIU PER PANTALLA TOTA LA INFORMACIO OBTINGUDA'
+        strEscriu = mess
+        txt_info_host.value = strEscriu
+
+end function 
+'FI FUNCIO EQUIP..........................................................................................................................................................'
+
+
+
+'INICI FUNCIO LLISTA PROGRAMARI'
+'..........................................................................................................................................................'
+function llista_Programari(StrComputer)
+
+    Const HKEY_LOCAL_MACHINE = &H80000002
+    Dim objReg, strSubkey, arrSubkeys
+    Dim Name, Version
+
+    'LLEGIR CLAU DE REGISTRE : HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ '
+    strKeyPath = "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\"
+
+    strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
+    Set objReg=GetObject( _
+        "winmgmts:{impersonationLevel=impersonate}!\\" & _
+        strComputer & "\root\default:StdRegProv")
+
+    objReg.EnumKey HKEY_LOCAL_MACHINE, strKeyPath, arrSubkeys
+
+    For Each strSubkey In arrSubkeys
+        objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "DisplayName", Name
+        If Name <> "" Then
+            objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "DisplayVersion", Version
+
+            mess = mess & Name & " " &Version & vbCrLf
+        End If
+    Next
+    strEscriu = mess
+    txt_info_host.value = strEscriu
+
+end function
+'FI FUNCIO LLISTA PROGRAMARI.............................................................................................................................'
+
+
+</script>
+
+
+
+
+<!-- javascript  -->
+<script LANGUAGE="JavaScript">
+        
+        //CARREGA AL INICIAR FINESTRA
+        window.onload=function(){
+            //addRow(1,20);
+        }
+
+        function inicia(){
+            //Esborra files  --> Crida esborraCeles
+            esborraCeles('entries', true);
+            //Crea de nou les files   --> Crida CreaCeles
+            creaCeles();
+        }
+        //----------------------------------------------------
+
+        function addRow(col1Text, col1Width) {
+
+            if (!document.getElementsByTagName) {
+              return;
+            }
+            var x = document.getElementById("entries").rows.length;
+            tabBody=document.getElementsByTagName("tbody").item(0);
+            row=document.createElement("tr");
+            row.id=x;
+            cell1 = document.createElement("td");
+            cell1.width=col1Width+"px";  
+            textnode1=document.createTextNode(col1Text);
+            cell1.appendChild(textnode1);
+            row.appendChild(cell1);
+            tabBody.appendChild(row);
+            tableHighlightRow();
+
+        }
+
+
+        function creaCeles(linia_a_llegir){
+            for ( r = 0; r < 1; r++ ) {
+                addRow(linia_a_llegir,200) // 200 correspon al width de la cela (200 px)
+            }
+            r=0;
+        }
+
+
+
+        function esborraCeles(id,toDeleteHeader){
+            var obj=document.getElementById(id);
+            if(!obj && !obj.row)
+                return;
+            if (typeof toDeleteHeader == 'undefined')
+                toDeleteHeader= false;
+            var limit = !!toDeleteHeader ? 0 : 1;
+            var rows = obj.rows;
+
+            if (limit > rows.length)
+                return;
+            for (; rows.length > limit;){
+                obj.deleteRow(limit);
+
+            }
+
+
+
+        }
+
+
+       
+//***********************************************************************
+ // FUNCIO RESALTA CELES I GUARDA VALOR
+
+    //Cridarà funció vbscript obte_valor per guardar el valor que posteriorment serà llegit del txtarea ocult.
+
+var selected = null;
+
+//
+// This function highlights a table row as the mouse hovers
+// over it. It also adds code to mark a row as selected when 
+// clicked on and toggle it when selected again
+//
+function tableHighlightRow() {
+  if (document.getElementById && document.createTextNode) {
+    var tables=document.getElementsByTagName('table');
+    for ( var i=0; i<tables.length; i++ ) {
+      if ( tables[i].className==='TableListJS' ) {
+        var trs=tables[i].getElementsByTagName('tr');
+        for ( var j=0; j<trs.length; j++) {
+          if (trs[j].parentNode.nodeName==='TBODY') {
+            trs[j].onmouseover=function(){
+                // 'highlight' color is set in tablelist.css
+                if ( this.className === '') {
+                    this.className='highlight';
+                }
+                return false
+            }
+            trs[j].onmouseout=function(){
+                if ( this.className === 'highlight') {
+                    this.className='';
+                }
+                return false
+            }
+            trs[j].onmousedown=function(){
+                //
+                // Toggle the selected state of this row
+                // 
+
+                // 'clicked' color is set in tablelist.css.
+                if ( this.className !== 'clicked' ) {
+                    // Clear previous selection
+                    if ( selected !== null ) {
+                        selected.className='';
+
+                    }
+
+                    // Mark this row as selected
+                    this.className='clicked';
+                    selected = this;
+
+             valor_cela = this.innerText;    //GUARDA EL VALOR SELECCIONAT EN VARIABLE valor_cela
+                
+                }
+                else {
+                    this.className='';
+                    selected = null;
+
+                }
+
+                return true
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+    function obtenirValorSeleccionatCela(a){   //Funcio que sera cridada desde vbscript   
+     return valor_cela;
+    }
+
+
+
+ //FI FUNCIO RESALTA TAULA
+ //*****************************************************************************************
+
+//UTILTIZA PER PASSAR EL VALOR DE LA CELA SELECCIONADA A VBSCRIPT COM A VARIABLE
+
+
+
+ 
+
+
+</script>
+
+ 
+
+
+
+
+
+</head>
+<body>
+    <h1>INFORMACIÓ EQUIPS REMOTS</h1>
+    <p><i><b>* Important no deixar cap espai en blanc.</i></b></p>
+    <div id="id1">
+    <textarea name="txt_entrada" rows=10 cols="50" ></textarea>
+    <br>
+    <br>
+    <!-- <input type="button" value="crea" onclick="javascript:creaCeles();"> -->
+    <input type="button" value="Comprova connectivitat" onclick="executa"> - 
+    <input type="button" value="Esborra llistat" onclick="javascript:esborraCeles('entries',true);">
+    <p></p>
+
+    <br>
+    <br>
+    <form>
+        <div class="tableFixHead">
+        <table class="TableListJS" id="entries">
+            <thead>
+                <tr>
+                   <td width='200px'></td>
+
+                </tr>
+            </thead>
+            <tbody style='height:10px' s>
+                <tr>
+                    
+
+                </tr>
+            </tbody>
+        </table>
+        
+        </div>
+    </form>
+    <textarea name="txt_Sortida" rows=0 cols=0 style="display:none;"></textarea> <!-- S'UTILITZA PER ENMAGATZEMAR TEMPORALMENT RESULTAT DE FUNCIO obter_valor --> 
+
+    <input type="button" value="Informació d'equip" onclick="infoEquip"> - 
+    <input type="button" value="Consulta registre" onclick="RegistreEquip"> - 
+    <input type="button" value="Programari Instal·lat" onclick="programariInstalat"> - 
+    <input type="button" value="Obrir C$" onclick="ObrirC"> - 
+    <input type="button" value="Obrir D$" onclick="ObrirD"> 
+    
+    <br>
+</div>
+<div id="id2">
+    <br>
+    <textarea name="txt_info_host" rows=30 cols="90" ></textarea>
+</div>
+</body>
+</html>
