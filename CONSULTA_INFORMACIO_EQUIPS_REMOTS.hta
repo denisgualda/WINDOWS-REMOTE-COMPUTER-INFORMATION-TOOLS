@@ -10,6 +10,9 @@
         APPLICATIONNAME = "PING HOSTS & INFO HOSTS"
         id="PING HOSTS & INFO HOSTS"
         name="PING HOSTS & INFO HOSTS"
+        
+        MAXIMIZEBUTTON="yes"
+        MINIMIZEBUTTON="yes"
     />
 
 <!-- vbscript  -->   
@@ -150,11 +153,17 @@ function info_host(strComputer)
                                                              "Root\CIMv2", _
                                                              strUser, _
                                                              strPassword)
+        '***************************************************************************************************************************************'
+        '***************************************************************************************************************************************'
+        '***** LES CONSULTES LES FA SOBRE EL PATH: \HOSTNAME\ROOT\cimv2\ms_409 ---> CONNECTAR EN AQUEST PATH DES DE LAPLICACIO WMI Explorer 2.0'
+        '***************************************************************************************************************************************'
+        '***************************************************************************************************************************************'
+        objSWbemServices.Security_.ImpersonationLevel = 3
                                                             
         'INFORMACIO DE SISTEMA'
         '*************************************************************'
         Dim wmiItemsOSinfo
-        Set wmiItemsOSinfo = objSWbemServices.ExecQuery("SELECT * FROM Win32_OperatingSystem")      ''Informació sistema operatiu
+        Set wmiItemsOSinfo = objSWbemServices.ExecQuery("SELECT * FROM Win32_OperatingSystem",,48)      'Informació sistema operatiu'
         mess = mess & "-----------------------------------------------------------" & VBCrlf
         mess = mess & VBCrlf
         For each item in wmiItemsOSinfo
@@ -205,6 +214,7 @@ function info_host(strComputer)
             With item
                 mess = mess & " USUARI LOGUEJAT:    " & .UserName & VBCrlf
                 mess = mess & VBCrlf
+                usuari = .UserName
             End With
         Next
         
@@ -248,6 +258,17 @@ function info_host(strComputer)
             End With
         Next
 
+        'INFORMACIO BIOS'
+        '***************************************************************'
+        Dim wmiItemBIOS
+        Set wmiItemBIOS = objSWbemServices.ExecQuery("SELECT * FROM Win32_BIOS")
+        For Each item in wmiItemBIOS
+            With item
+                mess = mess & " Versió BIOS: " & .Version &  VBCrlf
+                mess = mess & VBCrlf
+            End With
+        Next
+
         'INFORMACIO RAM'
         '***************************************************************'
         Dim wmiItemsMemory
@@ -271,12 +292,59 @@ function info_host(strComputer)
             End With
         Next
 
+        'INFORMACIO IMPRESORES INSTAL·LADES LOCALS'
+        '***************************************************************'
+        mess = mess & VBCrlf
+        Dim wmiImpresores
+        Set wmiImpresores = objSWbemServices.ExecQuery("SELECT * FROM Win32_Printer")
+        mess = mess & "IMPRESSORES" & VBCrlf
+        mess = mess & "-----------------------------------------------------------" & VBCrlf
+        mess = mess & " LOCALS:" & VBCrlf
+        mess = mess & VBCrlf
+        For Each item in wmiImpresores
+            With item
+                mess = mess & "     " & .Name & VBCrlf
+            End With
+        Next
+        mess = mess & VBCrlf
+            'IMPRESSORES MAPEJADES XARXA'
+            '***************************************************************'
+            mess = mess & " XARXA:" & VBCrlf
+            mess = mess & VBCrlf
+
+            const HKU = &H80000003
+
+            Set oReg=GetObject("winmgmts:{impersonationLevel=impersonate}!\\" &_ 
+            strComputer & "\root\default:StdRegProv")
+
+            'ES CONSULTA LA CLAU DE REGISTRE --> HKEY_USERS\S-1-5-21-1118647226-1548230860-1774337113-196740\Printers\Connections'
+            Set wmiImpressoresXarxa = GetObject("winmgmts:\\" & StrComputer)
+            Set profs = wmiImpressoresXarxa.ExecQuery("Select SID from Win32_UserProfile where SID like 'S-1-5-21%'")    '--> LA CLAU DE LUSUARI SEMPRE COMENÇARA AMB AQUEST VALOR'
+
+            For Each prof In profs
+              strKeyPath = prof.SID & "\Printers\Connections"
+              if oReg.EnumKey(HKU, strKeyPath, arrSubKeys)=0 Then
+
+                if strKeyPath <> " " Then       'SI EL RESULTAT NO ÉS BUIT LLISTA IMPRESSORES DE XARXA'
+                    
+                      For Each subkey In arrSubKeys
+                        
+                          mess = mess & "     " & subkey & VBCrlf
+                      Next
+                End if
+              end if
+            Next
+       mess = mess & "-----------------------------------------------------------" & VBCrlf
+
+
         'INFORMACIO XARXA'
         '***************************************************************'
+        
+        mess = mess & VBCrlf
         mess = mess & VBCrlf
         Set wmiItemsxarxa = objSWbemServices.ExecQuery("SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled = True")
         mess = mess & "INFORMACIO DE XARXA " & VBCrlf 
-        mess = mess & "------------------------" & VBCrlf
+        mess = mess & "-----------------------------------------------------------" & VBCrlf
         mess = mess & VBCrLf
         For Each item in wmiItemsxarxa
             With item
@@ -328,7 +396,10 @@ function info_host(strComputer)
         mess = mess & VBCrlf
         '--------------------------------------------------------------------------------------------------------------------------------------------------------'
 
-'INFORMACIO PANTALLA'
+
+
+
+'INFORMACIO DOCKSTATION'
         '***************************************************************'
         'INFORMACIO DOCKSTATION --> executa el powershell info_dock.ps1'
         mess = mess & "DOCKSTATION" & VBCrlf
@@ -353,6 +424,10 @@ function info_host(strComputer)
         ' FI - ESCRIU PER PANTALLA TOTA LA INFORMACIO OBTINGUDA'
         strEscriu = mess
         txt_info_host.value = strEscriu
+
+
+
+
 
 end function 
 'FI FUNCIO EQUIP..........................................................................................................................................................'
@@ -379,11 +454,13 @@ function llista_Programari(StrComputer)
 
     For Each strSubkey In arrSubkeys
         objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "DisplayName", Name
+        objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "InstallDate", Data
         If Name <> "" Then
             objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "DisplayVersion", Version
-
-            mess = mess & Name & " " &Version & vbCrLf
+            objReg.GetStringValue HKEY_LOCAL_MACHINE, strKeyPath & strSubkey, "InstallDate", DataInstalacio
+            mess = mess & Name & " (Versio: " & Version & " - " &  "Data Instal: " & DataInstalacio & ")" & VBCrlf
         End If
+    
     Next
     strEscriu = mess
     txt_info_host.value = strEscriu
@@ -391,6 +468,12 @@ function llista_Programari(StrComputer)
 end function
 'FI FUNCIO LLISTA PROGRAMARI.............................................................................................................................'
 
+
+'DEFINEIX TAMANY DE FINESTRA'
+
+Sub Window_onLoad
+    window.resizeTo 1400,1000
+End Sub
 
 </script>
 
@@ -558,51 +641,55 @@ function tableHighlightRow() {
 
 </head>
 <body>
-    <h1>INFORMACIÓ EQUIPS REMOTS</h1>
-    <p><i><b>* Important no deixar cap espai en blanc.</i></b></p>
-    <div id="id1">
-    <textarea name="txt_entrada" rows=10 cols="50" ></textarea>
-    <br>
-    <br>
-    <!-- <input type="button" value="crea" onclick="javascript:creaCeles();"> -->
-    <input type="button" value="Comprova connectivitat" onclick="executa"> - 
-    <input type="button" value="Esborra llistat" onclick="javascript:esborraCeles('entries',true);">
-    <p></p>
+    <h1>INFORMACIÓ EQUIPS REMOTS</h1><hr>
+    <div id="id1" style="float: left;">
 
-    <br>
-    <br>
+
+    <p><i><b>* Important no deixar cap espai en blanc.</i></b></p>
+        
+    <textarea name="txt_entrada" rows=20 cols="50" ></textarea>
+    <br><br>
+            <input type="button" value="Comprova connectivitat" onclick="executa"> - 
+    <input type="button" value="Esborra llistat" onclick="javascript:esborraCeles('entries',true);"> <br><br>
+
+    <!--<div style="position:absolute; border:0px solid black; padding:10px 5px 10px 5px;text-align: left; top:54%; left: 15%; text-align: center; display:block;"> -->
+
+    <b>SELECCIONA L'EQUIP A CONSULTAR</b>
     <form>
         <div class="tableFixHead">
-        <table class="TableListJS" id="entries">
-            <thead>
+            <table class="TableListJS" id="entries">
+                <thead>
+                    <tr>
+                        <td width='200px'></td>
+                    </tr>
+                </thead>
+                <tbody style='height:10px' s>
                 <tr>
-                   <td width='200px'></td>
-
                 </tr>
-            </thead>
-            <tbody style='height:10px' s>
-                <tr>
-                    
-
-                </tr>
-            </tbody>
-        </table>
-        
+                </tbody>
+            </table>
         </div>
     </form>
+    <br>
+    <input type="button" value="Informació d'equip" onclick="infoEquip" style="width: 180px"> - 
+    <input type="button" value="Obre registre" onclick="RegistreEquip" style="width: 180px"> <br><br>
+    <input type="button" value="Programari Instal·lat" onclick="programariInstalat" style="width: 180px"> - 
+    <input type="button" value="Obrir C$" onclick="ObrirC" style="width: 70px"> -
+    <input type="button" value="Obrir D$" onclick="ObrirD"  style="width: 70px" align="center">
+
+    </div>
+
     <textarea name="txt_Sortida" rows=0 cols=0 style="display:none;"></textarea> <!-- S'UTILITZA PER ENMAGATZEMAR TEMPORALMENT RESULTAT DE FUNCIO obter_valor --> 
 
-    <input type="button" value="Informació d'equip" onclick="infoEquip"> - 
-    <input type="button" value="Consulta registre" onclick="RegistreEquip"> - 
-    <input type="button" value="Programari Instal·lat" onclick="programariInstalat"> - 
-    <input type="button" value="Obrir C$" onclick="ObrirC"> - 
-    <input type="button" value="Obrir D$" onclick="ObrirD"> 
     
-    <br>
-</div>
-<div id="id2">
-    <br>
-    <textarea name="txt_info_host" rows=30 cols="90" ></textarea>
-</div>
+
+
+
+
+    <div id="id2" style="float: right; padding-right: 30px;">
+        <br><br>
+        <textarea name="txt_info_host" rows=45 cols="95" ></textarea>
+    </div>
+
 </body>
 </html>
