@@ -122,6 +122,21 @@ End sub
 '-------------------------------------'
 
 
+'-------------------------------------'
+'INICI BOTO CONSULTA VARIABLES DENTORN'
+Sub subConsultaVariableEntorn
+
+    strComputer = obtenirValorSeleccionatCela(strComputer)
+    consultaVariableEntorn(strComputer)
+
+End sub
+'-------------------------------------'
+
+
+
+
+
+
 
 'FUNCIO EXECUTA PING'
 function actiu(strhost)
@@ -303,7 +318,8 @@ function info_host(strComputer)
         mess = mess & VBCrlf
         For Each item in wmiImpresores
             With item
-                mess = mess & "     " & .Name & VBCrlf
+                mess = mess & "     " & .Name & VBCrlf 
+                mess = mess & "         Port: " & .PortName & VBCrlf
             End With
         Next
         mess = mess & VBCrlf
@@ -325,13 +341,15 @@ function info_host(strComputer)
               strKeyPath = prof.SID & "\Printers\Connections"
               if oReg.EnumKey(HKU, strKeyPath, arrSubKeys)=0 Then
 
-                if strKeyPath <> " " Then       'SI EL RESULTAT NO ÉS BUIT LLISTA IMPRESSORES DE XARXA'
+               ' if strKeyPath <> " " Then       'SI EL RESULTAT NO ÉS BUIT LLISTA IMPRESSORES DE XARXA'
                     
+                    if isArray(arrSubKeys) Then
                       For Each subkey In arrSubKeys
                         
                           mess = mess & "     " & subkey & VBCrlf
                       Next
-                End if
+               
+                    End if
               end if
             Next
        mess = mess & "-----------------------------------------------------------" & VBCrlf
@@ -467,6 +485,44 @@ function llista_Programari(StrComputer)
 
 end function
 'FI FUNCIO LLISTA PROGRAMARI.............................................................................................................................'
+
+
+
+'INICI FUNCIO CONSULTA VARIABLES DENTORN' .............................................................................................................................
+ 
+ 'LLEGIR REGISTRE  (PLATAFORMA (DEPARTAMENT/ORGANISME)'
+        '***************************************************************'
+    function consultaVariableEntorn(strComputer)
+    const HKLM = &H80000002
+
+    dim keyPath
+    keyPath = "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+
+    dim reg
+
+    dim valueNames, types
+    dim value
+    dim i
+
+      set reg = getObject( "Winmgmts:root\default:StdRegProv" )
+
+      if reg.enumValues( HKLM, keyPath, valueNames, types ) = 0 then
+        if isArray( valueNames ) then
+          for i = 0 to UBound( valueNames )
+            reg.getStringValue HKLM, keyPath, valueNames(i), value
+            mess = mess & valueNames(i) & ":  "  & value & VBCrlf 
+            mess = mess & VBCrlf
+          next
+        end if
+      end if
+
+        strEscriu = mess
+        txt_info_host.value = strEscriu
+
+
+end function 
+
+'FI FUNCIO CONSULTA VARIABLES DENTORN .............................................................................................................................'
 
 
 'DEFINEIX TAMANY DE FINESTRA'
@@ -675,7 +731,9 @@ function tableHighlightRow() {
     <input type="button" value="Obre registre" onclick="RegistreEquip" style="width: 180px"> <br><br>
     <input type="button" value="Programari Instal·lat" onclick="programariInstalat" style="width: 180px"> - 
     <input type="button" value="Obrir C$" onclick="ObrirC" style="width: 70px"> -
-    <input type="button" value="Obrir D$" onclick="ObrirD"  style="width: 70px" align="center">
+    <input type="button" value="Obrir D$" onclick="ObrirD"  style="width: 70px" align="center"> <br><br>
+    <input type="button" value="Consulta variables entorn" onclick="subConsultaVariableEntorn"  style="width: 170px" align="center">
+
 
     </div>
 
