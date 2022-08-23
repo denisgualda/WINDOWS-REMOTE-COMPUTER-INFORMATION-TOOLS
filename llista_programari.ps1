@@ -1,5 +1,5 @@
 
-[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+#[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
 $ComputerName = $args[0]
 #$ComputerName = "localhost"
