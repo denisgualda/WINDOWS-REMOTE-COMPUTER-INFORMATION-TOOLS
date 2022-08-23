@@ -2,6 +2,8 @@
 [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 
 $ComputerName = $args[0]
+#$ComputerName = "localhost"
+
 ForEach ($Computer in $ComputerName) {
 #[System.Windows.Forms.Messagebox]::Show($Computer)	
 

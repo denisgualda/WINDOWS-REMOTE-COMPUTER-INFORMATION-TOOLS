@@ -95,7 +95,7 @@ Sub RegistreEquip
 
     MsgBox "Servei Registre remot activat. Clica Acceptar per continuar"
 
-    'CRIDA FITXER obre_registre_remot.ps1'
+    'CRIDA FITXER llistat'
     strInstruccio0 = "%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe Set-ExecutionPolicy Unrestricted -Force"
     strDosCommand0 = strInstruccio0
     Set objShell = CreateObject("Wscript.Shell")
@@ -116,7 +116,31 @@ End sub
 Sub programariInstalat
     
     strComputer = obtenirValorSeleccionatCela(strComputer)      'CRIDA FUNCIO JAVASCRIPT PER OBTENIR EL VALOR SELECCIONAT DE LA CELA (hostname seleccionat)'
-    llista_Programari(strComputer)
+    'llista_Programari(strComputer)  --> Ja no sutilitza, executa fitxer powerhsell: llista_programari.ps1'
+
+        'HABILITA FUNCIO D'EXECUCIO D'SCRIPTS POWERSHELL EN EQUIP QUE EXECUTA SCRIPT (local)'
+        strInstruccio0 = "%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe Set-ExecutionPolicy Unrestricted -Force"
+        strDosCommand0 = strInstruccio0
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand0)
+        strPSResults0 = objExec.StdOut.ReadAll
+
+        strInstruccio = "%SystemRoot%\sysnative\WindowsPowerShell\v1.0\powershell.exe -file llista_programari.ps1"
+        strDOSCommand = strInstruccio & " " & strComputer 
+
+        Set objShell = CreateObject("Wscript.Shell")
+        Set objExec = objShell.Exec(strDOSCommand)
+        strPSResults = objExec.StdOut.ReadAll
+        mess = mess & strPSresults
+        mess = mess & VBCrlf
+
+
+    strEscriu = mess
+    txt_info_host.value = strEscriu
+
+        '--------------------------------------------------------------------------------------------------------------------------------------------------------'
+
+
 
 End sub
 '-------------------------------------'
