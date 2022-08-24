@@ -4,9 +4,13 @@ function Open-RemoteRegistry ($computerName = "127.0.0.1") {
     Add-Type -AssemblyName Microsoft.VisualBasic
     Add-Type -AssemblyName System.Windows.Forms
 
+    [System.Windows.MessageBox]::Show($PSversionTable)
     #start regedit
     #C:\windows\SysWOW64\regedit.exe
-    Start-Process regedit -Verb runAs
+    cd C:\Windows\
+    regedit.exe
+
+    #Start-Process regedit -Verb runAs
 
     #wait for it to start
     Start-Sleep -Seconds 2
