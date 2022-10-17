@@ -5,7 +5,7 @@ $array = @()
 foreach($pc in $computers){
 
     $computername=$pc
-    Write-Host "nom de lordinador: $computername"
+
 
 
 
