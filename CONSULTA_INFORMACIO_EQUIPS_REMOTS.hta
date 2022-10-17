@@ -146,6 +146,10 @@ Sub programariInstalat
     Me.hostNameSeleccionat strComputer      'CRIDA FUNCIO JAVASCRIPT PER MODIFICAR EL NOM DEL HOSTNAME SELECCIONAT DEL LABEL HOSTNAME '
     '*********************************'
 
+    Set objShell = CreateObject("WScript.Shell")
+    Set ObjExec = objShell.Exec("cmd.exe /c sc \\" & strComputer & " config RemoteRegistry start= auto")
+    Set ObjExec = objShell.Exec("cmd.exe /c sc \\" & strComputer & " start RemoteRegistry")
+
     'llista_Programari(strComputer) --> Ja no sutilitza, executa fitxer powerhsell: llista_programari.ps1'
 
         'HABILITA FUNCIO D'EXECUCIO D'SCRIPTS POWERSHELL EN EQUIP QUE EXECUTA SCRIPT (local)'
